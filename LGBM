@@ -1,0 +1,51 @@
+from sklearn.model_selection import train_test_split 
+import lightgbm as lgb
+
+#データの読み込み
+trainX = pd.read_csv("trainX.csv")
+testX = pd.read_csv("testX.csv")
+Y = pd.read_csv("Y.csv")
+
+#データを分割
+x_train, x_test, y_train, y_test = train_test_split(trainX, Y, test_size=0.2, random_state=18)
+
+#データセットの作成
+lgb_train = lgb.Dataset(data=x_train, label=y_train)
+lgb_eval = lgb.Dataset(data=x_test, label=y_test)
+
+#パラメータの設定
+params = {'task': 'train','boosting_type': 'gbdt', 
+          #二値分類
+　　　　　　'objective': 'binary',
+          #AUCを最大化
+          'metric': 'auc', 
+          'learning_rate': 0.01, 'num_leaves': 48, 'num_iteration': 5000, 'verbose': 0 ,
+          'colsample_bytree':.8, 'subsample':.9, 'max_depth':7, 'reg_alpha':.1, 'reg_lambda':.1, 
+          'min_split_gain':.01, 'min_child_weight':1}
+
+#モデルの作成
+model = lgb.train(params, lgb_train, valid_sets=lgb_eval, early_stopping_rounds=150, verbose_eval=200)
+
+
+#特徴量の重要度をグラフで可視化
+lgb.plot_importance(model, figsize=(5, 10));
+
+
+#予測
+preds = model.predict(testX)
+
+#csvファイルの作成
+sub_lgb = pd.DataFrame()
+sub_lgb['カラム名'] = test_id
+sub_lgb['カラム名'] = preds
+sub_lgb.to_csv("lgb_baseline.csv", index=False)
+
+
+#AUCのスコアを見たい時
+
+y_pred = model.predict(x_test, num_iteration=model.best_iteration)
+
+from sklearn import metrics
+fpr, tpr, thresholds = metrics.roc_curve(y_val, y_pred)
+auc = metrics.auc(fpr, tpr)
+print(auc)
